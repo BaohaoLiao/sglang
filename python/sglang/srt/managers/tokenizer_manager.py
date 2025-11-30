@@ -868,6 +868,9 @@ class TokenizerManager(TokenizerCommunicatorMixin):
                 SessionParams(**obj.session_params) if obj.session_params else None
             )
 
+            # DEBUG
+            print(f"[TOKENIZER DEBUG] obj.dllm_algorithm={obj.dllm_algorithm}, obj.dllm_block_size={obj.dllm_block_size}")
+
             tokenized_obj = TokenizedGenerateReqInput(
                 input_text,
                 input_ids,
@@ -894,6 +897,9 @@ class TokenizerManager(TokenizerCommunicatorMixin):
                 dllm_algorithm=obj.dllm_algorithm,
                 dllm_block_size=obj.dllm_block_size,
             )
+
+            # DEBUG
+            print(f"[TOKENIZER DEBUG] tokenized_obj.dllm_algorithm={tokenized_obj.dllm_algorithm}, tokenized_obj.dllm_block_size={tokenized_obj.dllm_block_size}")
         elif isinstance(obj, EmbeddingReqInput):
             tokenized_obj = TokenizedEmbeddingReqInput(
                 input_text,
