@@ -380,8 +380,15 @@ class TpModelWorker(BaseTpWorker):
 
         if self.pp_group.is_last_rank:
             if self.is_dllm():
+                # Use per-request algorithm if specified, otherwise use default
+                if forward_batch.dllm_config is not None:
+                    from sglang.srt.dllm.algorithm import get_algorithm
+                    algorithm = get_algorithm(forward_batch.dllm_config)
+                else:
+                    algorithm = self.dllm_algorithm
+
                 logits_output, next_token_ids, can_run_cuda_graph = (
-                    self.dllm_algorithm.run(self.model_runner, forward_batch)
+                    algorithm.run(self.model_runner, forward_batch)
                 )
                 return GenerationBatchResult(
                     logits_output=logits_output,
