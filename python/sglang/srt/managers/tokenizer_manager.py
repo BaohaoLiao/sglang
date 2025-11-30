@@ -1636,6 +1636,10 @@ class TokenizerManager(TokenizerCommunicatorMixin):
                     "output_ids": output_token_ids,
                     "meta_info": meta_info,
                 }
+
+                # Add DLLM decoding order if available
+                if hasattr(recv_obj, "dllm_decoding_order") and recv_obj.dllm_decoding_order:
+                    out_dict["dllm_decoding_order"] = recv_obj.dllm_decoding_order[i]
             elif isinstance(recv_obj, BatchTokenIDOutput):
                 if self.server_args.stream_output and state.obj.stream:
                     state.output_ids.extend(recv_obj.output_ids[i])
@@ -1649,6 +1653,10 @@ class TokenizerManager(TokenizerCommunicatorMixin):
                     "output_ids": output_token_ids,
                     "meta_info": meta_info,
                 }
+
+                # Add DLLM decoding order if available
+                if hasattr(recv_obj, "dllm_decoding_order") and recv_obj.dllm_decoding_order:
+                    out_dict["dllm_decoding_order"] = recv_obj.dllm_decoding_order[i]
             elif isinstance(recv_obj, BatchMultimodalOutput):
                 raise NotImplementedError("BatchMultimodalOut not implemented")
             else:
