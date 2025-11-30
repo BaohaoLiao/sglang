@@ -1875,6 +1875,11 @@ class Scheduler(
                     )
 
         # Create a new batch
+        # Use the first request's dllm_config if available, otherwise use scheduler's default
+        batch_dllm_config = self.dllm_config
+        if can_run_list and can_run_list[0].dllm_config is not None:
+            batch_dllm_config = can_run_list[0].dllm_config
+
         new_batch = ScheduleBatch.init_new(
             can_run_list,
             self.req_to_token_pool,
@@ -1884,7 +1889,7 @@ class Scheduler(
             self.enable_overlap,
             self.spec_algorithm,
             chunked_req=self.chunked_req,
-            dllm_config=self.dllm_config,
+            dllm_config=batch_dllm_config,
         )
         if self.enable_hierarchical_cache:
             # todo (zhiqiang): disable cuda graph execution if hicache loading triggered
