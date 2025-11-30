@@ -1,5 +1,7 @@
 # Viewing Decoding Order in SGLang Offline Mode
 
+> **✨ NEW**: Decoding order is now available programmatically! See `DLLM_DECODING_ORDER_API.md` for the new API.
+
 ## Quick Answer
 
 ### Sequential Algorithm

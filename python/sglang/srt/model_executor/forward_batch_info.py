@@ -228,6 +228,9 @@ class ForwardBatch:
     top_logprobs_nums: Optional[List[int]] = None
     token_ids_logprobs: Optional[List[List[int]]] = None
 
+    # For DLLM decoding order tracking
+    dllm_decoding_order: Optional[List[int]] = None
+
     # For logits and logprobs post processing
     next_token_logits_buffer: torch.Tensor = None
     temp_scaled_logprobs: bool = False

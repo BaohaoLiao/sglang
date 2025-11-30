@@ -22,6 +22,9 @@ class LowConfidence(DllmAlgorithm):
         mask_index = forward_batch.input_ids == self.mask_id
         start = len(forward_batch.input_ids) - torch.sum(mask_index).item()
 
+        # Track decoding order
+        decoding_order = []
+
         for _ in range(self.block_size):
             mask_index = forward_batch.input_ids == self.mask_id
             if torch.sum(mask_index).item() == 0:
@@ -46,7 +49,13 @@ class LowConfidence(DllmAlgorithm):
             _, select_index = torch.topk(confidence, k=1)
             transfer_index[select_index] = True
 
+            # Track this position in decoding order
+            decoding_order.append(select_index[0].item())
+
             forward_batch.input_ids[transfer_index] = x[transfer_index]
+
+        # Store decoding order in forward_batch
+        forward_batch.dllm_decoding_order = decoding_order
 
         logits_output, can_run_cuda_graph = model_runner.forward(
             forward_batch, pp_proxy_tensors=None

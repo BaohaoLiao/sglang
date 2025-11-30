@@ -89,6 +89,9 @@ class SequentialVerbose(DllmAlgorithm):
             print(f"  Current state: {masked_display[-self.block_size:]}")
             print()
 
+        # Store decoding order in forward_batch
+        forward_batch.dllm_decoding_order = self.decoding_order
+
         # Final forward pass with all tokens unmasked
         print("Final forward pass with all tokens unmasked...")
         logits_output, can_run_cuda_graph = model_runner.forward(

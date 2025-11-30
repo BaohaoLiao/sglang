@@ -387,6 +387,7 @@ class TpModelWorker(BaseTpWorker):
                     logits_output=logits_output,
                     next_token_ids=next_token_ids,
                     can_run_cuda_graph=can_run_cuda_graph,
+                    dllm_decoding_order=forward_batch.dllm_decoding_order,
                 )
 
             logits_output, can_run_cuda_graph = self.model_runner.forward(

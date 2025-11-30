@@ -25,6 +25,9 @@ class Sequential(DllmAlgorithm):
         mask_index = forward_batch.input_ids == self.mask_id
         start = len(forward_batch.input_ids) - torch.sum(mask_index).item()
 
+        # Track decoding order
+        decoding_order = []
+
         for _ in range(self.block_size):
             mask_index = forward_batch.input_ids == self.mask_id
             if torch.sum(mask_index).item() == 0:
@@ -48,8 +51,14 @@ class Sequential(DllmAlgorithm):
                 first_masked_idx = masked_positions[0]
                 transfer_index[first_masked_idx] = True
 
+                # Track this position in decoding order
+                decoding_order.append(first_masked_idx.item())
+
             # Unmask the selected token
             forward_batch.input_ids[transfer_index] = x[transfer_index]
+
+        # Store decoding order in forward_batch
+        forward_batch.dllm_decoding_order = decoding_order
 
         # Final forward pass with all tokens unmasked
         logits_output, can_run_cuda_graph = model_runner.forward(
