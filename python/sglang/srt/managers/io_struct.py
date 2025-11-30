@@ -700,6 +700,10 @@ class TokenizedGenerateReqInput(BaseReq):
     # Whether to return entropy
     return_entropy: bool = False
 
+    # Per-request DLLM parameters (override engine-level settings)
+    dllm_algorithm: Optional[str] = None
+    dllm_block_size: Optional[int] = None
+
 
 @dataclass
 class BatchTokenizedGenerateReqInput(BaseBatchReq):
