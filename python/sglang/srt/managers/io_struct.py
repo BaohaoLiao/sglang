@@ -227,6 +227,10 @@ class GenerateReqInput(BaseReq):
     # Whether to return entropy
     return_entropy: bool = False
 
+    # Per-request DLLM parameters (override engine-level settings)
+    dllm_algorithm: Optional[Union[List[Optional[str]], Optional[str]]] = None
+    dllm_block_size: Optional[Union[List[Optional[int]], Optional[int]]] = None
+
     def contains_mm_input(self) -> bool:
         return (
             has_valid_data(self.image_data)

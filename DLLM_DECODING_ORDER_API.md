@@ -24,6 +24,64 @@ decoding_order = outputs["dllm_decoding_order"]
 print(f"Decoding order: {decoding_order}")
 ```
 
+## Per-Request DLLM Configuration
+
+You can now specify DLLM algorithm and block size per-request, allowing you to change algorithms without reinitializing the engine:
+
+```python
+import sglang
+
+# Initialize with DLLM enabled (any algorithm)
+llm = sglang.Engine(
+    model_path="/path/to/llada2",
+    dllm_algorithm="Sequential",  # Default algorithm
+    dllm_block_size=4  # Default block size
+)
+
+# Override algorithm and block size per request
+outputs1 = llm.generate(
+    "Translate to French: Hello",
+    {
+        "temperature": 1.0,
+        "dllm_algorithm": "LowConfidence",  # Override to LowConfidence
+        "dllm_block_size": 8  # Override to block size 8
+    }
+)
+
+# Use different settings for another request
+outputs2 = llm.generate(
+    "Translate to Spanish: Hello",
+    {
+        "temperature": 1.0,
+        "dllm_algorithm": "Sequential",  # Use Sequential
+        "dllm_block_size": 4  # Use block size 4
+    }
+)
+
+# Use engine defaults if not specified
+outputs3 = llm.generate(
+    "Translate to German: Hello",
+    {"temperature": 1.0}  # Uses engine's default: Sequential, block_size=4
+)
+
+print(f"Request 1 order: {outputs1['dllm_decoding_order']}")  # LowConfidence pattern
+print(f"Request 2 order: {outputs2['dllm_decoding_order']}")  # Sequential pattern
+print(f"Request 3 order: {outputs3['dllm_decoding_order']}")  # Sequential pattern (default)
+```
+
+### Benefits
+
+- **Flexibility**: Switch algorithms without reinitializing the engine
+- **Experimentation**: Compare different algorithms on the same prompts
+- **Batch Heterogeneity**: Use different algorithms in the same batch
+
+### Notes
+
+- Per-request DLLM parameters override engine-level settings
+- You can override just `dllm_algorithm`, just `dllm_block_size`, or both
+- If you only override one, the other uses the engine default
+- DLLM must be enabled at engine level (initialize with `dllm_algorithm` parameter)
+
 ## Output Structure
 
 The `outputs` dictionary now includes a `dllm_decoding_order` field:
@@ -89,6 +147,42 @@ for i, outputs in enumerate(outputs_list):
     print(f"Request {i}: {outputs['dllm_decoding_order']}")
     # Request 0: [[2, 0, 3, 1]]
     # Request 1: [[1, 2, 0, 3]]
+```
+
+### Batch with Per-Request DLLM Settings
+
+You can specify different DLLM settings for each request in a batch:
+
+```python
+llm = sglang.Engine(
+    model_path="...",
+    dllm_algorithm="Sequential",  # Default
+    dllm_block_size=4
+)
+
+prompts = [
+    "Translate to French: Hello",
+    "Translate to Spanish: Hello",
+    "Translate to German: Hello"
+]
+
+# Different DLLM settings for each request
+sampling_params_list = [
+    {"temperature": 1.0, "dllm_algorithm": "Sequential", "dllm_block_size": 4},
+    {"temperature": 1.0, "dllm_algorithm": "LowConfidence", "dllm_block_size": 4},
+    {"temperature": 1.0, "dllm_algorithm": "Sequential", "dllm_block_size": 8}
+]
+
+outputs_list = llm.generate(prompts, sampling_params_list)
+
+for i, outputs in enumerate(outputs_list):
+    print(f"Request {i}:")
+    print(f"  Algorithm: {sampling_params_list[i].get('dllm_algorithm', 'Sequential (default)')}")
+    print(f"  Block size: {sampling_params_list[i].get('dllm_block_size', 4)}")
+    print(f"  Decoding order: {outputs['dllm_decoding_order']}")
+    # Request 0: Sequential pattern [0, 1, 2, 3]
+    # Request 1: LowConfidence pattern [2, 0, 3, 1]
+    # Request 2: Sequential pattern [0, 1, 2, 3, 4, 5, 6, 7]
 ```
 
 ## Complete Example

@@ -203,10 +203,30 @@ class Engine(EngineBase):
                     f"data_parallel_rank must be less than dp_size: {self.server_args.dp_size}"
                 )
 
+        # Extract DLLM parameters from sampling_params if present
+        dllm_algorithm_param = None
+        dllm_block_size_param = None
+        if isinstance(sampling_params, dict):
+            dllm_algorithm_param = sampling_params.pop("dllm_algorithm", None)
+            dllm_block_size_param = sampling_params.pop("dllm_block_size", None)
+        elif isinstance(sampling_params, list):
+            # Handle batch case
+            dllm_algorithm_param = []
+            dllm_block_size_param = []
+            for params in sampling_params:
+                if isinstance(params, dict):
+                    dllm_algorithm_param.append(params.pop("dllm_algorithm", None))
+                    dllm_block_size_param.append(params.pop("dllm_block_size", None))
+                else:
+                    dllm_algorithm_param.append(None)
+                    dllm_block_size_param.append(None)
+
         obj = GenerateReqInput(
             text=prompt,
             input_ids=input_ids,
             sampling_params=sampling_params,
+            dllm_algorithm=dllm_algorithm_param,
+            dllm_block_size=dllm_block_size_param,
             image_data=image_data,
             audio_data=audio_data,
             video_data=video_data,
@@ -287,10 +307,31 @@ class Engine(EngineBase):
                 )
 
         logger.debug(f"data_parallel_rank: {data_parallel_rank}")
+
+        # Extract DLLM parameters from sampling_params if present
+        dllm_algorithm_param = None
+        dllm_block_size_param = None
+        if isinstance(sampling_params, dict):
+            dllm_algorithm_param = sampling_params.pop("dllm_algorithm", None)
+            dllm_block_size_param = sampling_params.pop("dllm_block_size", None)
+        elif isinstance(sampling_params, list):
+            # Handle batch case
+            dllm_algorithm_param = []
+            dllm_block_size_param = []
+            for params in sampling_params:
+                if isinstance(params, dict):
+                    dllm_algorithm_param.append(params.pop("dllm_algorithm", None))
+                    dllm_block_size_param.append(params.pop("dllm_block_size", None))
+                else:
+                    dllm_algorithm_param.append(None)
+                    dllm_block_size_param.append(None)
+
         obj = GenerateReqInput(
             text=prompt,
             input_ids=input_ids,
             sampling_params=sampling_params,
+            dllm_algorithm=dllm_algorithm_param,
+            dllm_block_size=dllm_block_size_param,
             image_data=image_data,
             audio_data=audio_data,
             video_data=video_data,
