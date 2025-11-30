@@ -1289,11 +1289,18 @@ class Scheduler(
 
             # Create per-request DLLM config if parameters are provided
             req_dllm_config = self.dllm_config
+
+            # DEBUG: Log what we received
+            logger.info(f"[DEBUG] Request {recv_req.rid}: dllm_algorithm={recv_req.dllm_algorithm}, dllm_block_size={recv_req.dllm_block_size}")
+
             if recv_req.dllm_algorithm is not None or recv_req.dllm_block_size is not None:
                 # Use request-specific parameters, fall back to engine defaults
                 if self.dllm_config is not None:
                     req_algorithm = recv_req.dllm_algorithm if recv_req.dllm_algorithm is not None else self.dllm_config.algorithm
                     req_block_size = recv_req.dllm_block_size if recv_req.dllm_block_size is not None else self.dllm_config.block_size
+
+                    logger.info(f"[DEBUG] Creating per-request config: algorithm={req_algorithm}, block_size={req_block_size}")
+
                     req_dllm_config = DllmConfig(
                         algorithm=req_algorithm,
                         block_size=req_block_size,
