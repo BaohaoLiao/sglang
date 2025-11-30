@@ -250,6 +250,10 @@ class Engine(EngineBase):
             data_parallel_rank=data_parallel_rank,
             rid=rid,
         )
+
+        # DEBUG: Verify object has fields
+        print(f"[ENGINE DEBUG AFTER CREATE] obj.dllm_algorithm={obj.dllm_algorithm}, obj.dllm_block_size={obj.dllm_block_size}")
+
         generator = self.tokenizer_manager.generate_request(obj, None)
 
         if stream:
