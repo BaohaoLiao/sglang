@@ -892,9 +892,6 @@ class BatchTokenIDOutput(
     completion_tokens: List[int]
     cached_tokens: List[int]
 
-    # DLLM decoding order (position indices in order of unmasking)
-    dllm_decoding_order: Optional[List[List[int]]] = None
-
     # Logprobs
     input_token_logprobs_val: List[float]
     input_token_logprobs_idx: List[int]
@@ -924,6 +921,9 @@ class BatchTokenIDOutput(
 
     # The trainer step id. Used to know which step's weights are used for sampling.
     token_steps: List[List[int]] = None
+
+    # DLLM decoding order (position indices in order of unmasking)
+    dllm_decoding_order: Optional[List[List[int]]] = None
 
 
 @dataclass
