@@ -206,9 +206,15 @@ class Engine(EngineBase):
         # Extract DLLM parameters from sampling_params if present
         dllm_algorithm_param = None
         dllm_block_size_param = None
+
+        # DEBUG
+        print(f"[ENGINE DEBUG] sampling_params type: {type(sampling_params)}")
+        print(f"[ENGINE DEBUG] sampling_params value: {sampling_params}")
+
         if isinstance(sampling_params, dict):
             dllm_algorithm_param = sampling_params.pop("dllm_algorithm", None)
             dllm_block_size_param = sampling_params.pop("dllm_block_size", None)
+            print(f"[ENGINE DEBUG] Extracted: algorithm={dllm_algorithm_param}, block_size={dllm_block_size_param}")
         elif isinstance(sampling_params, list):
             # Handle batch case
             dllm_algorithm_param = []
