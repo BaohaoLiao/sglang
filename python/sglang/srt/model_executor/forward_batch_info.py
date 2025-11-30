@@ -230,6 +230,8 @@ class ForwardBatch:
 
     # For DLLM decoding order tracking
     dllm_decoding_order: Optional[List[int]] = None
+    # For DLLM per-request configuration
+    dllm_config: Optional["DllmConfig"] = None
 
     # For logits and logprobs post processing
     next_token_logits_buffer: torch.Tensor = None
@@ -399,6 +401,7 @@ class ForwardBatch:
             token_type_ids=batch.token_type_ids,
             tbo_split_seq_index=batch.tbo_split_seq_index,
             dimensions=batch.dimensions,
+            dllm_config=batch.dllm_config,
         )
         device = model_runner.device
 

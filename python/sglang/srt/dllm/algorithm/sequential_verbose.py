@@ -26,7 +26,11 @@ class SequentialVerbose(DllmAlgorithm):
     ) -> Tuple[
         Union[LogitsProcessorOutput, torch.Tensor], Optional[torch.Tensor], bool
     ]:
-        mask_index = forward_batch.input_ids == self.mask_id
+        # Use per-request config if available, otherwise use algorithm's default
+        mask_id = forward_batch.dllm_config.mask_id if forward_batch.dllm_config else self.mask_id
+        block_size = forward_batch.dllm_config.block_size if forward_batch.dllm_config else self.block_size
+
+        mask_index = forward_batch.input_ids == mask_id
         start = len(forward_batch.input_ids) - torch.sum(mask_index).item()
 
         # Reset decoding order for this generation
@@ -35,14 +39,14 @@ class SequentialVerbose(DllmAlgorithm):
         print("\n" + "="*60)
         print("SEQUENTIAL DLLM DECODING - Verbose Mode")
         print("="*60)
-        print(f"Block size: {self.block_size}")
-        print(f"Mask token ID: {self.mask_id}")
+        print(f"Block size: {block_size}")
+        print(f"Mask token ID: {mask_id}")
         print(f"Total masked tokens: {torch.sum(mask_index).item()}")
         print(f"Start position: {start}")
         print()
 
-        for iteration in range(self.block_size):
-            mask_index = forward_batch.input_ids == self.mask_id
+        for iteration in range(block_size):
+            mask_index = forward_batch.input_ids == mask_id
             num_masked = torch.sum(mask_index).item()
 
             if num_masked == 0:
