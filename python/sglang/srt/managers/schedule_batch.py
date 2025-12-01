@@ -793,6 +793,13 @@ class Req:
         if self.return_logprob:
             max_prefix_len = min(max_prefix_len, self.logprob_start_len)
         max_prefix_len = max(max_prefix_len, 0)
+
+        # For DLLM: Only cache the original input, not the masked tokens
+        # Masked tokens change each iteration and must be reprocessed
+        if self.is_dllm():
+            max_prefix_len = min(max_prefix_len, len(self.origin_input_ids))
+            print(f"[REQ DEBUG] DLLM: Limiting prefix cache to origin_input_ids length: {max_prefix_len}")
+
         token_ids = self.fill_ids[:max_prefix_len]
 
         if tree_cache is not None:
