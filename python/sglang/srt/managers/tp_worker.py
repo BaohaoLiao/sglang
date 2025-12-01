@@ -392,6 +392,17 @@ class TpModelWorker(BaseTpWorker):
         if self.pp_group.is_last_rank:
             if model_worker_batch.dllm_config is not None:
                 dllm_algorithm = self._get_dllm_algorithm(model_worker_batch.dllm_config)
+                # Debug print to observe DLLM inputs.
+                try:
+                    print(
+                        "[DLLM tp_worker] input_ids=",
+                        forward_batch.input_ids[0].tolist(),
+                        "dllm_config=",
+                        model_worker_batch.dllm_config,
+                        flush=True,
+                    )
+                except Exception:
+                    pass
                 (
                     logits_output,
                     next_token_ids,
