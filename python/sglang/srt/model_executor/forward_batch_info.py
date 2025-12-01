@@ -228,6 +228,11 @@ class ForwardBatch:
     top_logprobs_nums: Optional[List[int]] = None
     token_ids_logprobs: Optional[List[List[int]]] = None
 
+    # For DLLM decoding order tracking
+    dllm_decoding_order: Optional[List[int]] = None
+    # For DLLM per-request configuration
+    dllm_config: Optional["DllmConfig"] = None
+
     # For logits and logprobs post processing
     next_token_logits_buffer: torch.Tensor = None
     temp_scaled_logprobs: bool = False
@@ -396,6 +401,7 @@ class ForwardBatch:
             token_type_ids=batch.token_type_ids,
             tbo_split_seq_index=batch.tbo_split_seq_index,
             dimensions=batch.dimensions,
+            dllm_config=batch.dllm_config,
         )
         device = model_runner.device
 

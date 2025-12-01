@@ -1,8 +1,6 @@
 from typing import Optional, Tuple, Union
 
-import numpy as np
 import torch
-import torch.nn.functional as F
 
 from sglang.srt.dllm.algorithm.base import DllmAlgorithm
 from sglang.srt.layers.logits_processor import LogitsProcessorOutput
@@ -10,7 +8,12 @@ from sglang.srt.model_executor.forward_batch_info import ForwardBatch
 from sglang.srt.model_executor.model_runner import ModelRunner
 
 
-class LowConfidence(DllmAlgorithm):
+class Sequential(DllmAlgorithm):
+    """Sequential unmasking algorithm.
+
+    Unmasks tokens from left to right in a deterministic order.
+    This strategy doesn't rely on confidence scores and is fully predictable.
+    """
 
     def run(
         self,
@@ -23,59 +26,45 @@ class LowConfidence(DllmAlgorithm):
         mask_id = forward_batch.dllm_config.mask_id if forward_batch.dllm_config else self.mask_id
         block_size = forward_batch.dllm_config.block_size if forward_batch.dllm_config else self.block_size
 
-        # DEBUG
-        print(f"[ALGORITHM DEBUG] self.block_size={self.block_size}, forward_batch.dllm_config={forward_batch.dllm_config}")
-        print(f"[ALGORITHM DEBUG] Using block_size={block_size}")
-
         mask_index = forward_batch.input_ids == mask_id
         start = len(forward_batch.input_ids) - torch.sum(mask_index).item()
 
-        # DEBUG
-        num_masked = torch.sum(mask_index).item()
-        print(f"[ALGORITHM DEBUG] Initial masked tokens: {num_masked}, start: {start}, total length: {len(forward_batch.input_ids)}")
-
         # Track decoding order
         decoding_order = []
-        iteration_count = 0
 
         for _ in range(block_size):
             mask_index = forward_batch.input_ids == mask_id
-            num_masked_now = torch.sum(mask_index).item()
-            if num_masked_now == 0:
-                print(f"[ALGORITHM DEBUG] Breaking at iteration {iteration_count}, no more masked tokens")
+            if torch.sum(mask_index).item() == 0:
                 break
-            iteration_count += 1
 
+            # Forward pass to get predictions
             logits_output, can_run_cuda_graph = model_runner.forward(
                 forward_batch, pp_proxy_tensors=None
             )
 
+            # Get predicted tokens
             x = torch.argmax(logits_output.full_logits, dim=-1)
-            p = torch.squeeze(
-                torch.gather(
-                    F.softmax(logits_output.full_logits, dim=-1),
-                    dim=-1,
-                    index=torch.unsqueeze(x, -1),
-                ),
-                -1,
-            )
-            x = torch.where(mask_index, x, forward_batch.input_ids)
-            confidence = torch.where(mask_index, p, -np.inf)
+
+            # Sequential selection: find first masked position
             transfer_index = torch.zeros_like(x, dtype=torch.bool, device=x.device)
-            _, select_index = torch.topk(confidence, k=1)
-            transfer_index[select_index] = True
 
-            # Track this position in decoding order
-            decoding_order.append(select_index[0].item())
+            # Find the leftmost (first) masked token
+            masked_positions = torch.where(mask_index)[0]
+            if len(masked_positions) > 0:
+                # Select the first masked position
+                first_masked_idx = masked_positions[0]
+                transfer_index[first_masked_idx] = True
 
+                # Track this position in decoding order
+                decoding_order.append(first_masked_idx.item())
+
+            # Unmask the selected token
             forward_batch.input_ids[transfer_index] = x[transfer_index]
-
-        # DEBUG
-        print(f"[ALGORITHM DEBUG] Completed {iteration_count} iterations, decoding_order length: {len(decoding_order)}")
 
         # Store decoding order in forward_batch
         forward_batch.dllm_decoding_order = decoding_order
 
+        # Final forward pass with all tokens unmasked
         logits_output, can_run_cuda_graph = model_runner.forward(
             forward_batch, pp_proxy_tensors=None
         )
@@ -84,4 +73,4 @@ class LowConfidence(DllmAlgorithm):
         return logits_output, next_token_ids, can_run_cuda_graph
 
 
-Algorithm = LowConfidence
+Algorithm = Sequential

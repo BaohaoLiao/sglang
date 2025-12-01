@@ -868,6 +868,9 @@ class TokenizerManager(TokenizerCommunicatorMixin):
                 SessionParams(**obj.session_params) if obj.session_params else None
             )
 
+            # DEBUG
+            print(f"[TOKENIZER DEBUG] obj.dllm_algorithm={obj.dllm_algorithm}, obj.dllm_block_size={obj.dllm_block_size}")
+
             tokenized_obj = TokenizedGenerateReqInput(
                 input_text,
                 input_ids,
@@ -891,7 +894,12 @@ class TokenizerManager(TokenizerCommunicatorMixin):
                 data_parallel_rank=obj.data_parallel_rank,
                 priority=obj.priority,
                 extra_key=obj.extra_key,
+                dllm_algorithm=obj.dllm_algorithm,
+                dllm_block_size=obj.dllm_block_size,
             )
+
+            # DEBUG
+            print(f"[TOKENIZER DEBUG] tokenized_obj.dllm_algorithm={tokenized_obj.dllm_algorithm}, tokenized_obj.dllm_block_size={tokenized_obj.dllm_block_size}")
         elif isinstance(obj, EmbeddingReqInput):
             tokenized_obj = TokenizedEmbeddingReqInput(
                 input_text,
@@ -1636,6 +1644,10 @@ class TokenizerManager(TokenizerCommunicatorMixin):
                     "output_ids": output_token_ids,
                     "meta_info": meta_info,
                 }
+
+                # Add DLLM decoding order if available
+                if hasattr(recv_obj, "dllm_decoding_order") and recv_obj.dllm_decoding_order:
+                    out_dict["dllm_decoding_order"] = recv_obj.dllm_decoding_order[i]
             elif isinstance(recv_obj, BatchTokenIDOutput):
                 if self.server_args.stream_output and state.obj.stream:
                     state.output_ids.extend(recv_obj.output_ids[i])
@@ -1649,6 +1661,10 @@ class TokenizerManager(TokenizerCommunicatorMixin):
                     "output_ids": output_token_ids,
                     "meta_info": meta_info,
                 }
+
+                # Add DLLM decoding order if available
+                if hasattr(recv_obj, "dllm_decoding_order") and recv_obj.dllm_decoding_order:
+                    out_dict["dllm_decoding_order"] = recv_obj.dllm_decoding_order[i]
             elif isinstance(recv_obj, BatchMultimodalOutput):
                 raise NotImplementedError("BatchMultimodalOut not implemented")
             else:

@@ -689,6 +689,7 @@ class Req:
         self.dllm_ids = []
         self.dllm_block_offset = 0
         self.dllm_config = dllm_config
+        self.dllm_decoding_order = []  # Track decoding order for each block
 
     @property
     def seqlen(self) -> int:
@@ -764,6 +765,9 @@ class Req:
 
     def init_next_round_input(self, tree_cache: Optional[BasePrefixCache] = None):
         if self.is_dllm():
+            # DEBUG
+            print(f"[REQ DEBUG] init_next_round_input: dllm_config.block_size={self.dllm_config.block_size}, fill_ids={self.fill_ids}")
+
             if not self.fill_ids:
                 self.dllm_ids = (
                     self.origin_input_ids
@@ -772,11 +776,13 @@ class Req:
                     ]
                     * self.dllm_config.block_size
                 )
+                print(f"[REQ DEBUG] Created new dllm_ids with {len(self.dllm_ids)} tokens (origin: {len(self.origin_input_ids)}, masked: {self.dllm_config.block_size})")
             else:
                 self.dllm_block_offset += self.dllm_config.block_size
                 self.dllm_ids += [
                     self.dllm_config.mask_id
                 ] * self.dllm_config.block_size
+                print(f"[REQ DEBUG] Extended dllm_ids to {len(self.dllm_ids)} tokens (added {self.dllm_config.block_size} masked tokens)")
             self.fill_ids = self.dllm_ids
         else:
             self.fill_ids = self.origin_input_ids + self.output_ids
@@ -787,6 +793,13 @@ class Req:
         if self.return_logprob:
             max_prefix_len = min(max_prefix_len, self.logprob_start_len)
         max_prefix_len = max(max_prefix_len, 0)
+
+        # For DLLM: Only cache the original input, not the masked tokens
+        # Masked tokens change each iteration and must be reprocessed
+        if self.is_dllm():
+            max_prefix_len = min(max_prefix_len, len(self.origin_input_ids))
+            print(f"[REQ DEBUG] DLLM: Limiting prefix cache to origin_input_ids length: {max_prefix_len}")
+
         token_ids = self.fill_ids[:max_prefix_len]
 
         if tree_cache is not None:
@@ -809,6 +822,16 @@ class Req:
                 match_result.last_host_node,
                 match_result.host_hit_length,
             )
+
+            # For DLLM: Truncate prefix_indices to only include original input
+            # Masked tokens must be reprocessed each iteration, not cached
+            if self.is_dllm():
+                print(f"[REQ DEBUG] DLLM: prefix_indices len={len(self.prefix_indices)}, origin_input_ids len={len(self.origin_input_ids)}")
+                if len(self.prefix_indices) > len(self.origin_input_ids):
+                    print(f"[REQ DEBUG] DLLM: Truncating prefix_indices from {len(self.prefix_indices)} to {len(self.origin_input_ids)}")
+                    self.prefix_indices = self.prefix_indices[:len(self.origin_input_ids)]
+                    print(f"[REQ DEBUG] DLLM: After truncation, prefix_indices len={len(self.prefix_indices)}")
+
             self.cache_protected_len = len(self.prefix_indices)
         self.extend_input_len = len(self.fill_ids) - len(self.prefix_indices)
 
@@ -1290,6 +1313,12 @@ class ScheduleBatch(ScheduleBatchDisaggregationDecodeMixin):
         # Init tensors
         reqs = self.reqs
         input_ids = [r.fill_ids[len(r.prefix_indices) :] for r in reqs]
+
+        # DEBUG for DLLM
+        if self.is_dllm():
+            for i, r in enumerate(reqs):
+                print(f"[BATCH DEBUG] Req {i}: fill_ids={len(r.fill_ids)}, prefix_indices={len(r.prefix_indices)}, input_ids={len(input_ids[i])}, dllm_block_offset={r.dllm_block_offset}")
+
         extend_num_tokens = sum(len(ids) for ids in input_ids)
         seq_lens = [len(r.fill_ids) for r in reqs]
         orig_seq_lens = [max(len(r.fill_ids), len(r.origin_input_ids)) for r in reqs]

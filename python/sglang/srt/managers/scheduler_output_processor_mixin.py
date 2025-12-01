@@ -297,6 +297,10 @@ class SchedulerOutputProcessorMixin:
         assert len(batch.reqs) == 1, "batch size is currently expected to be 1"
         req = batch.reqs[0]
 
+        # Transfer DLLM decoding order to request
+        if result.dllm_decoding_order is not None:
+            req.dllm_decoding_order.extend(result.dllm_decoding_order)
+
         for next_token_id in next_token_ids:
             req.output_ids.append(next_token_id)
             req.check_finished()
@@ -756,6 +760,7 @@ class SchedulerOutputProcessorMixin:
         spec_accepted_tokens = []
         retraction_counts = []
         output_hidden_states = None
+        dllm_decoding_orders = []  # For DLLM decoding order tracking
 
         queue_times = []
         forward_entry_times = []
@@ -861,6 +866,7 @@ class SchedulerOutputProcessorMixin:
                 completion_tokens.append(len(output_ids_))
                 cached_tokens.append(req.cached_tokens)
                 retraction_counts.append(req.retraction_count)
+                dllm_decoding_orders.append(req.dllm_decoding_order if req.dllm_decoding_order else [])
 
                 queue_times.append(req.time_stats.get_queueing_time())
                 forward_entry_times.append(req.time_stats.forward_entry_time)
@@ -980,6 +986,7 @@ class SchedulerOutputProcessorMixin:
                     prompt_tokens=prompt_tokens,
                     completion_tokens=completion_tokens,
                     cached_tokens=cached_tokens,
+                    dllm_decoding_order=dllm_decoding_orders,
                     input_token_logprobs_val=input_token_logprobs_val,
                     input_token_logprobs_idx=input_token_logprobs_idx,
                     output_token_logprobs_val=output_token_logprobs_val,

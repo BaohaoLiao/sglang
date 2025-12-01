@@ -203,10 +203,36 @@ class Engine(EngineBase):
                     f"data_parallel_rank must be less than dp_size: {self.server_args.dp_size}"
                 )
 
+        # Extract DLLM parameters from sampling_params if present
+        dllm_algorithm_param = None
+        dllm_block_size_param = None
+
+        # DEBUG
+        print(f"[ENGINE DEBUG] sampling_params type: {type(sampling_params)}")
+        print(f"[ENGINE DEBUG] sampling_params value: {sampling_params}")
+
+        if isinstance(sampling_params, dict):
+            dllm_algorithm_param = sampling_params.pop("dllm_algorithm", None)
+            dllm_block_size_param = sampling_params.pop("dllm_block_size", None)
+            print(f"[ENGINE DEBUG] Extracted: algorithm={dllm_algorithm_param}, block_size={dllm_block_size_param}")
+        elif isinstance(sampling_params, list):
+            # Handle batch case
+            dllm_algorithm_param = []
+            dllm_block_size_param = []
+            for params in sampling_params:
+                if isinstance(params, dict):
+                    dllm_algorithm_param.append(params.pop("dllm_algorithm", None))
+                    dllm_block_size_param.append(params.pop("dllm_block_size", None))
+                else:
+                    dllm_algorithm_param.append(None)
+                    dllm_block_size_param.append(None)
+
         obj = GenerateReqInput(
             text=prompt,
             input_ids=input_ids,
             sampling_params=sampling_params,
+            dllm_algorithm=dllm_algorithm_param,
+            dllm_block_size=dllm_block_size_param,
             image_data=image_data,
             audio_data=audio_data,
             video_data=video_data,
@@ -224,6 +250,10 @@ class Engine(EngineBase):
             data_parallel_rank=data_parallel_rank,
             rid=rid,
         )
+
+        # DEBUG: Verify object has fields
+        print(f"[ENGINE DEBUG AFTER CREATE] obj.dllm_algorithm={obj.dllm_algorithm}, obj.dllm_block_size={obj.dllm_block_size}")
+
         generator = self.tokenizer_manager.generate_request(obj, None)
 
         if stream:
@@ -287,10 +317,31 @@ class Engine(EngineBase):
                 )
 
         logger.debug(f"data_parallel_rank: {data_parallel_rank}")
+
+        # Extract DLLM parameters from sampling_params if present
+        dllm_algorithm_param = None
+        dllm_block_size_param = None
+        if isinstance(sampling_params, dict):
+            dllm_algorithm_param = sampling_params.pop("dllm_algorithm", None)
+            dllm_block_size_param = sampling_params.pop("dllm_block_size", None)
+        elif isinstance(sampling_params, list):
+            # Handle batch case
+            dllm_algorithm_param = []
+            dllm_block_size_param = []
+            for params in sampling_params:
+                if isinstance(params, dict):
+                    dllm_algorithm_param.append(params.pop("dllm_algorithm", None))
+                    dllm_block_size_param.append(params.pop("dllm_block_size", None))
+                else:
+                    dllm_algorithm_param.append(None)
+                    dllm_block_size_param.append(None)
+
         obj = GenerateReqInput(
             text=prompt,
             input_ids=input_ids,
             sampling_params=sampling_params,
+            dllm_algorithm=dllm_algorithm_param,
+            dllm_block_size=dllm_block_size_param,
             image_data=image_data,
             audio_data=audio_data,
             video_data=video_data,

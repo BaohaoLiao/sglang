@@ -1287,6 +1287,32 @@ class Scheduler(
                 # Use default bootstrap port
                 recv_req.bootstrap_port = self.server_args.disaggregation_bootstrap_port
 
+            # Create per-request DLLM config if parameters are provided
+            req_dllm_config = self.dllm_config
+
+            # DEBUG: Log what we received
+            print(f"[SCHEDULER DEBUG] Request {recv_req.rid}: dllm_algorithm={recv_req.dllm_algorithm}, dllm_block_size={recv_req.dllm_block_size}")
+
+            if recv_req.dllm_algorithm is not None or recv_req.dllm_block_size is not None:
+                # Use request-specific parameters, fall back to engine defaults
+                if self.dllm_config is not None:
+                    req_algorithm = recv_req.dllm_algorithm if recv_req.dllm_algorithm is not None else self.dllm_config.algorithm
+                    req_block_size = recv_req.dllm_block_size if recv_req.dllm_block_size is not None else self.dllm_config.block_size
+
+                    print(f"[SCHEDULER DEBUG] Creating per-request config: algorithm={req_algorithm}, block_size={req_block_size}")
+
+                    req_dllm_config = DllmConfig(
+                        algorithm=req_algorithm,
+                        block_size=req_block_size,
+                        mask_id=self.dllm_config.mask_id,  # mask_id is model-specific, use engine's
+                    )
+                else:
+                    # DLLM not enabled at engine level, but user tried to use it per-request
+                    # This is not supported, warn and ignore
+                    logger.warning(
+                        f"Request {recv_req.rid} specified DLLM parameters but DLLM is not enabled at engine level. Ignoring."
+                    )
+
             req = Req(
                 recv_req.rid,
                 recv_req.input_text,
@@ -1312,7 +1338,7 @@ class Scheduler(
                     self.metrics_collector if self.enable_metrics else None
                 ),
                 http_worker_ipc=recv_req.http_worker_ipc,
-                dllm_config=self.dllm_config,
+                dllm_config=req_dllm_config,
             )
             req.tokenizer = self.tokenizer
 
@@ -1856,6 +1882,14 @@ class Scheduler(
                     )
 
         # Create a new batch
+        # Use the first request's dllm_config if available, otherwise use scheduler's default
+        batch_dllm_config = self.dllm_config
+        if can_run_list and can_run_list[0].dllm_config is not None:
+            batch_dllm_config = can_run_list[0].dllm_config
+            print(f"[SCHEDULER DEBUG] Using per-request DLLM config for batch: algorithm={batch_dllm_config.algorithm}, block_size={batch_dllm_config.block_size}")
+        else:
+            print(f"[SCHEDULER DEBUG] Using default DLLM config for batch: {batch_dllm_config}")
+
         new_batch = ScheduleBatch.init_new(
             can_run_list,
             self.req_to_token_pool,
@@ -1865,7 +1899,7 @@ class Scheduler(
             self.enable_overlap,
             self.spec_algorithm,
             chunked_req=self.chunked_req,
-            dllm_config=self.dllm_config,
+            dllm_config=batch_dllm_config,
         )
         if self.enable_hierarchical_cache:
             # todo (zhiqiang): disable cuda graph execution if hicache loading triggered
