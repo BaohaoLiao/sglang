@@ -22,12 +22,18 @@ class LowConfidence(DllmAlgorithm):
         bool,
         torch.Tensor,
     ]:
-        mask_index = forward_batch.input_ids == self.mask_id
-        start = len(forward_batch.input_ids) - torch.sum(mask_index).item()
+        # NOTE: DLLM currently assumes batch size 1.
+        assert (
+            forward_batch.input_ids.dim() == 2 and forward_batch.input_ids.size(0) == 1
+        ), "DLLM currently supports batch size 1"
+        input_ids = forward_batch.input_ids[0]
+        mask_index = input_ids == self.mask_id
+        mask_count = torch.sum(mask_index).item()
+        start = input_ids.size(0) - mask_count
         decoding_order = []
 
         for _ in range(self.block_size):
-            mask_index = forward_batch.input_ids == self.mask_id
+            mask_index = input_ids == self.mask_id
             if torch.sum(mask_index).item() == 0:
                 break
 
@@ -44,20 +50,20 @@ class LowConfidence(DllmAlgorithm):
                 ),
                 -1,
             )
-            x = torch.where(mask_index, x, forward_batch.input_ids)
+            x = torch.where(mask_index, x, input_ids)
             confidence = torch.where(mask_index, p, -np.inf)
             transfer_index = torch.zeros_like(x, dtype=torch.bool, device=x.device)
             _, select_index = torch.topk(confidence, k=1)
             transfer_index[select_index] = True
 
             decoding_order.append(int(select_index.item() - start))
-            forward_batch.input_ids[transfer_index] = x[transfer_index]
+            input_ids[transfer_index] = x[transfer_index]
 
         logits_output, can_run_cuda_graph = model_runner.forward(
             forward_batch, pp_proxy_tensors=None
         )
 
-        next_token_ids = forward_batch.input_ids[start:]
+        next_token_ids = input_ids[start:]
         return (
             logits_output,
             next_token_ids,
