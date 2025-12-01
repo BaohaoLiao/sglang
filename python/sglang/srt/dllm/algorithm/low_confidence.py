@@ -86,14 +86,14 @@ class LowConfidence(DllmAlgorithm):
         )
 
         next_token_ids = input_ids[0, start:]
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(
-                "DLLM LowConfidence debug: start=%s mask_positions=%s decoding_order=%s next_token_ids=%s",
-                start,
-                mask_positions.tolist(),
-                decoding_order,
-                next_token_ids.tolist(),
-            )
+        # Emit an info-level log so it shows up without DEBUG handlers.
+        logger.info(
+            "DLLM LowConfidence run: start=%s mask_positions=%s decoding_order=%s next_token_ids=%s",
+            start,
+            mask_positions.tolist(),
+            decoding_order,
+            next_token_ids.tolist(),
+        )
         return (
             logits_output,
             next_token_ids,
