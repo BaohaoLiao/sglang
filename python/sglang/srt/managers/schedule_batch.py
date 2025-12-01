@@ -689,7 +689,8 @@ class Req:
         self.dllm_ids = []
         self.dllm_block_offset = 0
         self.dllm_config = dllm_config
-        self.dllm_decoding_order: Optional[List[int]] = None
+        # Track the order in which masked positions are filled for DLLM.
+        self.dllm_decoding_order: Optional[List[int]] = [] if dllm_config else None
 
     @property
     def seqlen(self) -> int:

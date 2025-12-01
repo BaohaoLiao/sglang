@@ -299,6 +299,9 @@ class SchedulerOutputProcessorMixin:
 
         if result.dllm_decoding_order is not None:
             req.dllm_decoding_order = result.dllm_decoding_order.tolist()
+        elif req.dllm_decoding_order is None and batch.is_dllm():
+            # Ensure a non-None placeholder for DLLM responses
+            req.dllm_decoding_order = []
 
         for next_token_id in next_token_ids:
             req.output_ids.append(next_token_id)
