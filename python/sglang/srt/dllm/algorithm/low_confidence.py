@@ -30,13 +30,21 @@ class LowConfidence(DllmAlgorithm):
         mask_index = forward_batch.input_ids == mask_id
         start = len(forward_batch.input_ids) - torch.sum(mask_index).item()
 
+        # DEBUG
+        num_masked = torch.sum(mask_index).item()
+        print(f"[ALGORITHM DEBUG] Initial masked tokens: {num_masked}, start: {start}, total length: {len(forward_batch.input_ids)}")
+
         # Track decoding order
         decoding_order = []
+        iteration_count = 0
 
         for _ in range(block_size):
             mask_index = forward_batch.input_ids == mask_id
-            if torch.sum(mask_index).item() == 0:
+            num_masked_now = torch.sum(mask_index).item()
+            if num_masked_now == 0:
+                print(f"[ALGORITHM DEBUG] Breaking at iteration {iteration_count}, no more masked tokens")
                 break
+            iteration_count += 1
 
             logits_output, can_run_cuda_graph = model_runner.forward(
                 forward_batch, pp_proxy_tensors=None
@@ -61,6 +69,9 @@ class LowConfidence(DllmAlgorithm):
             decoding_order.append(select_index[0].item())
 
             forward_batch.input_ids[transfer_index] = x[transfer_index]
+
+        # DEBUG
+        print(f"[ALGORITHM DEBUG] Completed {iteration_count} iterations, decoding_order length: {len(decoding_order)}")
 
         # Store decoding order in forward_batch
         forward_batch.dllm_decoding_order = decoding_order
