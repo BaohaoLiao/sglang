@@ -25,11 +25,17 @@ class LowConfidence(DllmAlgorithm):
         bool,
         torch.Tensor,
     ]:
-        # NOTE: DLLM currently assumes batch size 1.
-        assert (
-            forward_batch.input_ids.dim() == 2 and forward_batch.input_ids.size(0) == 1
-        ), "DLLM currently supports batch size 1"
-        input_ids = forward_batch.input_ids  # shape [1, seq]
+        # Ensure we have shape [1, seq]
+        if forward_batch.input_ids.dim() == 1:
+            input_ids = forward_batch.input_ids.unsqueeze(0)
+            forward_batch.input_ids = input_ids
+        else:
+            input_ids = forward_batch.input_ids
+
+        if input_ids.dim() != 2 or input_ids.size(0) != 1:
+            raise ValueError(
+                f"DLLM currently supports batch size 1, got shape {tuple(input_ids.shape)}"
+            )
         mask_index = input_ids == self.mask_id
         mask_positions = torch.nonzero(mask_index[0], as_tuple=False).flatten()
         if mask_positions.numel() == 0:
