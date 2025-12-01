@@ -45,15 +45,14 @@ class LowConfidence(DllmAlgorithm):
             start = mask_positions.min().item()
         decoding_order = []
 
-        if logger.isEnabledFor(logging.DEBUG):
-            logger.debug(
-                "DLLM LowConfidence start=%s mask_positions=%s input_tail=%s",
-                start,
-                mask_positions.tolist(),
-                input_ids[0, -self.block_size :].tolist(),
-            )
+        # Print to stdout for visibility even when logging is filtered.
+        print(
+            f"[DLLM LowConfidence] start={start} mask_positions={mask_positions.tolist()} "
+            f"input_tail={input_ids[0, -self.block_size :].tolist()}",
+            flush=True,
+        )
 
-        for _ in range(self.block_size):
+        for step in range(self.block_size):
             mask_index = input_ids == self.mask_id
             if torch.sum(mask_index).item() == 0:
                 break
@@ -80,6 +79,12 @@ class LowConfidence(DllmAlgorithm):
             decoding_order.append(int(select_index.item() - start))
             input_ids = torch.where(transfer_index, x, input_ids)
             forward_batch.input_ids = input_ids
+
+            print(
+                f"[DLLM LowConfidence] step={step} select_index={select_index.item()} "
+                f"decoding_order={decoding_order} remaining_masks={int(torch.sum(input_ids == self.mask_id))}",
+                flush=True,
+            )
 
         logits_output, can_run_cuda_graph = model_runner.forward(
             forward_batch, pp_proxy_tensors=None
