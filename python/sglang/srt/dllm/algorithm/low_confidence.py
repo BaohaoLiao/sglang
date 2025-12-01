@@ -23,6 +23,10 @@ class LowConfidence(DllmAlgorithm):
         mask_id = forward_batch.dllm_config.mask_id if forward_batch.dllm_config else self.mask_id
         block_size = forward_batch.dllm_config.block_size if forward_batch.dllm_config else self.block_size
 
+        # DEBUG
+        print(f"[ALGORITHM DEBUG] self.block_size={self.block_size}, forward_batch.dllm_config={forward_batch.dllm_config}")
+        print(f"[ALGORITHM DEBUG] Using block_size={block_size}")
+
         mask_index = forward_batch.input_ids == mask_id
         start = len(forward_batch.input_ids) - torch.sum(mask_index).item()
 
