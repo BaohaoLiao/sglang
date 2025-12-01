@@ -689,6 +689,7 @@ class Req:
         self.dllm_ids = []
         self.dllm_block_offset = 0
         self.dllm_config = dllm_config
+        self.dllm_decoding_order: Optional[List[int]] = None
 
     @property
     def seqlen(self) -> int:

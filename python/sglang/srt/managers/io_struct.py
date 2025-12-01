@@ -949,6 +949,9 @@ class BatchTokenIDOutput(
     # Number of times each request was retracted.
     retraction_counts: List[int]
 
+    # Decoding order for diffusion LLM (per request); None when not applicable.
+    dllm_decoding_orders: List[Optional[List[int]]]
+
     # The trainer step id. Used to know which step's weights are used for sampling.
     token_steps: List[List[int]] = None
 
@@ -1030,6 +1033,9 @@ class BatchStrOutput(
 
     # The trainer step id. Used to know which step's weights are used for sampling.
     token_steps: List[List[int]] = None
+
+    # Decoding order for diffusion LLM (per request); None when not applicable.
+    dllm_decoding_orders: List[Optional[List[int]]] = None
 
 
 @dataclass

@@ -1617,6 +1617,9 @@ class TokenizerManager(TokenizerCommunicatorMixin):
                     {
                         "completion_tokens": recv_obj.completion_tokens[i],
                         "cached_tokens": recv_obj.cached_tokens[i],
+                        "dllm_decoding_order": None
+                        if getattr(recv_obj, "dllm_decoding_orders", None) is None
+                        else recv_obj.dllm_decoding_orders[i],
                     }
                 )
 

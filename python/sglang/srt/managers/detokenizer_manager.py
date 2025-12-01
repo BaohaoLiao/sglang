@@ -275,6 +275,7 @@ class DetokenizerManager(MultiHttpWorkerDetokenizerMixin):
             placeholder_tokens_idx=None,
             placeholder_tokens_val=None,
             retraction_counts=recv_obj.retraction_counts,
+            dllm_decoding_orders=recv_obj.dllm_decoding_orders,
             token_steps=recv_obj.token_steps,
             queue_time=recv_obj.queue_time,
             forward_entry_time=recv_obj.forward_entry_time,

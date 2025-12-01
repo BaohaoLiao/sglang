@@ -392,12 +392,18 @@ class TpModelWorker(BaseTpWorker):
         if self.pp_group.is_last_rank:
             if model_worker_batch.dllm_config is not None:
                 dllm_algorithm = self._get_dllm_algorithm(model_worker_batch.dllm_config)
-                logits_output, next_token_ids, can_run_cuda_graph = (
+                (
+                    logits_output,
+                    next_token_ids,
+                    can_run_cuda_graph,
+                    decoding_order,
+                ) = (
                     dllm_algorithm.run(self.model_runner, forward_batch)
                 )
                 return GenerationBatchResult(
                     logits_output=logits_output,
                     next_token_ids=next_token_ids,
+                    dllm_decoding_order=decoding_order,
                     can_run_cuda_graph=can_run_cuda_graph,
                 )
 

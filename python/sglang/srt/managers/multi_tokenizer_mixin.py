@@ -267,6 +267,9 @@ def _handle_output_by_index(output, i):
             placeholder_tokens_idx=None,
             placeholder_tokens_val=None,
             retraction_counts=_extract_field_by_index(output, "retraction_counts", i),
+            dllm_decoding_orders=_extract_field_by_index(
+                output, "dllm_decoding_orders", i, check_length=False
+            ),
             token_steps=_extract_field_by_index(
                 output, "token_steps", i, check_length=False
             ),

@@ -297,6 +297,9 @@ class SchedulerOutputProcessorMixin:
         assert len(batch.reqs) == 1, "batch size is currently expected to be 1"
         req = batch.reqs[0]
 
+        if result.dllm_decoding_order is not None:
+            req.dllm_decoding_order = result.dllm_decoding_order.tolist()
+
         for next_token_id in next_token_ids:
             req.output_ids.append(next_token_id)
             req.check_finished()
@@ -740,6 +743,7 @@ class SchedulerOutputProcessorMixin:
         rids = []
         http_worker_ipcs = []
         finished_reasons: List[BaseFinishReason] = []
+        dllm_decoding_orders = []
 
         decoded_texts = []
         decode_ids_list = []
@@ -851,6 +855,7 @@ class SchedulerOutputProcessorMixin:
                 req.send_decode_id_offset = len(decode_ids)
                 read_offsets.append(read_offset)
                 output_ids.append(output_ids_[send_token_offset:])
+                dllm_decoding_orders.append(req.dllm_decoding_order)
                 req.send_token_offset = len(output_ids_)
                 skip_special_tokens.append(req.sampling_params.skip_special_tokens)
                 spaces_between_special_tokens.append(
@@ -997,6 +1002,7 @@ class SchedulerOutputProcessorMixin:
                     placeholder_tokens_idx=None,
                     placeholder_tokens_val=None,
                     retraction_counts=retraction_counts,
+                    dllm_decoding_orders=dllm_decoding_orders,
                 )
             )
 
