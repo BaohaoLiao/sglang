@@ -765,6 +765,9 @@ class Req:
 
     def init_next_round_input(self, tree_cache: Optional[BasePrefixCache] = None):
         if self.is_dllm():
+            # DEBUG
+            print(f"[REQ DEBUG] init_next_round_input: dllm_config.block_size={self.dllm_config.block_size}, fill_ids={self.fill_ids}")
+
             if not self.fill_ids:
                 self.dllm_ids = (
                     self.origin_input_ids
@@ -773,11 +776,13 @@ class Req:
                     ]
                     * self.dllm_config.block_size
                 )
+                print(f"[REQ DEBUG] Created new dllm_ids with {len(self.dllm_ids)} tokens (origin: {len(self.origin_input_ids)}, masked: {self.dllm_config.block_size})")
             else:
                 self.dllm_block_offset += self.dllm_config.block_size
                 self.dllm_ids += [
                     self.dllm_config.mask_id
                 ] * self.dllm_config.block_size
+                print(f"[REQ DEBUG] Extended dllm_ids to {len(self.dllm_ids)} tokens (added {self.dllm_config.block_size} masked tokens)")
             self.fill_ids = self.dllm_ids
         else:
             self.fill_ids = self.origin_input_ids + self.output_ids
