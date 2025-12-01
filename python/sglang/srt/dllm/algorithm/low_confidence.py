@@ -45,6 +45,14 @@ class LowConfidence(DllmAlgorithm):
             start = mask_positions.min().item()
         decoding_order = []
 
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(
+                "DLLM LowConfidence start=%s mask_positions=%s input_tail=%s",
+                start,
+                mask_positions.tolist(),
+                input_ids[0, -self.block_size :].tolist(),
+            )
+
         for _ in range(self.block_size):
             mask_index = input_ids == self.mask_id
             if torch.sum(mask_index).item() == 0:
