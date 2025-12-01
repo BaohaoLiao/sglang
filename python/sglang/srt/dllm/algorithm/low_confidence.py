@@ -1,5 +1,6 @@
 from typing import Optional, Tuple, Union
 
+import logging
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -8,6 +9,8 @@ from sglang.srt.dllm.algorithm.base import DllmAlgorithm
 from sglang.srt.layers.logits_processor import LogitsProcessorOutput
 from sglang.srt.model_executor.forward_batch_info import ForwardBatch
 from sglang.srt.model_executor.model_runner import ModelRunner
+
+logger = logging.getLogger(__name__)
 
 
 class LowConfidence(DllmAlgorithm):
@@ -75,6 +78,14 @@ class LowConfidence(DllmAlgorithm):
         )
 
         next_token_ids = input_ids[0, start:]
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug(
+                "DLLM LowConfidence debug: start=%s mask_positions=%s decoding_order=%s next_token_ids=%s",
+                start,
+                mask_positions.tolist(),
+                decoding_order,
+                next_token_ids.tolist(),
+            )
         return (
             logits_output,
             next_token_ids,
