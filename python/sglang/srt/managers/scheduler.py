@@ -1291,7 +1291,7 @@ class Scheduler(
             req_dllm_config = self.dllm_config
 
             # DEBUG: Log what we received
-            logger.info(f"[DEBUG] Request {recv_req.rid}: dllm_algorithm={recv_req.dllm_algorithm}, dllm_block_size={recv_req.dllm_block_size}")
+            print(f"[SCHEDULER DEBUG] Request {recv_req.rid}: dllm_algorithm={recv_req.dllm_algorithm}, dllm_block_size={recv_req.dllm_block_size}")
 
             if recv_req.dllm_algorithm is not None or recv_req.dllm_block_size is not None:
                 # Use request-specific parameters, fall back to engine defaults
@@ -1299,7 +1299,7 @@ class Scheduler(
                     req_algorithm = recv_req.dllm_algorithm if recv_req.dllm_algorithm is not None else self.dllm_config.algorithm
                     req_block_size = recv_req.dllm_block_size if recv_req.dllm_block_size is not None else self.dllm_config.block_size
 
-                    logger.info(f"[DEBUG] Creating per-request config: algorithm={req_algorithm}, block_size={req_block_size}")
+                    print(f"[SCHEDULER DEBUG] Creating per-request config: algorithm={req_algorithm}, block_size={req_block_size}")
 
                     req_dllm_config = DllmConfig(
                         algorithm=req_algorithm,
@@ -1886,6 +1886,9 @@ class Scheduler(
         batch_dllm_config = self.dllm_config
         if can_run_list and can_run_list[0].dllm_config is not None:
             batch_dllm_config = can_run_list[0].dllm_config
+            print(f"[SCHEDULER DEBUG] Using per-request DLLM config for batch: algorithm={batch_dllm_config.algorithm}, block_size={batch_dllm_config.block_size}")
+        else:
+            print(f"[SCHEDULER DEBUG] Using default DLLM config for batch: {batch_dllm_config}")
 
         new_batch = ScheduleBatch.init_new(
             can_run_list,

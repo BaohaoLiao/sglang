@@ -384,8 +384,10 @@ class TpModelWorker(BaseTpWorker):
                 if forward_batch.dllm_config is not None:
                     from sglang.srt.dllm.algorithm import get_algorithm
                     algorithm = get_algorithm(forward_batch.dllm_config)
+                    print(f"[TP_WORKER DEBUG] Using per-request DLLM config: algorithm={forward_batch.dllm_config.algorithm}, block_size={forward_batch.dllm_config.block_size}")
                 else:
                     algorithm = self.dllm_algorithm
+                    print(f"[TP_WORKER DEBUG] Using default DLLM algorithm")
 
                 logits_output, next_token_ids, can_run_cuda_graph = (
                     algorithm.run(self.model_runner, forward_batch)
