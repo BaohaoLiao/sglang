@@ -825,9 +825,12 @@ class Req:
 
             # For DLLM: Truncate prefix_indices to only include original input
             # Masked tokens must be reprocessed each iteration, not cached
-            if self.is_dllm() and len(self.prefix_indices) > len(self.origin_input_ids):
-                print(f"[REQ DEBUG] DLLM: Truncating prefix_indices from {len(self.prefix_indices)} to {len(self.origin_input_ids)}")
-                self.prefix_indices = self.prefix_indices[:len(self.origin_input_ids)]
+            if self.is_dllm():
+                print(f"[REQ DEBUG] DLLM: prefix_indices len={len(self.prefix_indices)}, origin_input_ids len={len(self.origin_input_ids)}")
+                if len(self.prefix_indices) > len(self.origin_input_ids):
+                    print(f"[REQ DEBUG] DLLM: Truncating prefix_indices from {len(self.prefix_indices)} to {len(self.origin_input_ids)}")
+                    self.prefix_indices = self.prefix_indices[:len(self.origin_input_ids)]
+                    print(f"[REQ DEBUG] DLLM: After truncation, prefix_indices len={len(self.prefix_indices)}")
 
             self.cache_protected_len = len(self.prefix_indices)
         self.extend_input_len = len(self.fill_ids) - len(self.prefix_indices)
