@@ -1296,6 +1296,12 @@ class ScheduleBatch(ScheduleBatchDisaggregationDecodeMixin):
         # Init tensors
         reqs = self.reqs
         input_ids = [r.fill_ids[len(r.prefix_indices) :] for r in reqs]
+
+        # DEBUG for DLLM
+        if self.is_dllm():
+            for i, r in enumerate(reqs):
+                print(f"[BATCH DEBUG] Req {i}: fill_ids={len(r.fill_ids)}, prefix_indices={len(r.prefix_indices)}, input_ids={len(input_ids[i])}, dllm_block_offset={r.dllm_block_offset}")
+
         extend_num_tokens = sum(len(ids) for ids in input_ids)
         seq_lens = [len(r.fill_ids) for r in reqs]
         orig_seq_lens = [max(len(r.fill_ids), len(r.origin_input_ids)) for r in reqs]
