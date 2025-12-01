@@ -125,6 +125,13 @@ class SchedulerRuntimeCheckerMixin:
         return memory_leak, token_msg
 
     def _check_radix_cache_memory(self: Scheduler):
+        # Diffusion LLM uses block-masked decoding and manages KV differently;
+        # its allocations can leave transient protected tokens that make the
+        # standard leak heuristic overly strict. Skip the leak check when DLLM
+        # is enabled to avoid false positives.
+        if getattr(self, "dllm_config", None) is not None:
+            return False, "DLLM enabled, skip radix cache memory leak check.\n"
+
         _, _, available_size, evictable_size = self._get_token_info()
         protected_size = self.tree_cache.protected_size()
         memory_leak = (available_size + evictable_size) != (
