@@ -291,6 +291,7 @@ class Scheduler(
 
         # Init diffusion LLM config
         self.dllm_config = DllmConfig.from_server_args(server_args)
+        self.dllm_seen = self.dllm_config is not None
 
         # Init inter-process communication
         self.init_sockets(server_args, port_args)
@@ -1319,6 +1320,8 @@ class Scheduler(
                 )
                 or self.dllm_config,
             )
+            if req.is_dllm():
+                self.dllm_seen = True
             req.tokenizer = self.tokenizer
 
             if self.disaggregation_mode != DisaggregationMode.NULL:
