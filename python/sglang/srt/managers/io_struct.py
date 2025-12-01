@@ -209,6 +209,10 @@ class GenerateReqInput(BaseReq):
     # Conversation id used for tracking requests
     conversation_id: Optional[str] = None
 
+    # Diffusion LLM
+    dllm_algorithm: Optional[Union[List[str], str]] = None
+    dllm_block_size: Optional[Union[List[int], int]] = None
+
     # Priority for the request
     priority: Optional[int] = None
 
@@ -358,6 +362,7 @@ class GenerateReqInput(BaseReq):
         self._normalize_logprob_params(num)
         self._normalize_custom_logit_processor(num)
         self._normalize_bootstrap_params(num)
+        self._normalize_dllm_params(num)
 
     def _expand_inputs(self, num):
         """Expand the main inputs (text, input_ids, input_embeds) for parallel sampling."""
@@ -560,6 +565,21 @@ class GenerateReqInput(BaseReq):
         elif isinstance(self.bootstrap_pair_key, list):
             self.bootstrap_pair_key = self.bootstrap_pair_key * self.parallel_sample_num
 
+    def _normalize_dllm_params(self, num: int):
+        if self.dllm_algorithm is None:
+            self.dllm_algorithm = [None] * num
+        elif not isinstance(self.dllm_algorithm, list):
+            self.dllm_algorithm = [self.dllm_algorithm] * num
+        else:
+            self.dllm_algorithm = self.dllm_algorithm * self.parallel_sample_num
+
+        if self.dllm_block_size is None:
+            self.dllm_block_size = [None] * num
+        elif not isinstance(self.dllm_block_size, list):
+            self.dllm_block_size = [self.dllm_block_size] * num
+        else:
+            self.dllm_block_size = self.dllm_block_size * self.parallel_sample_num
+
     def _validate_session_params(self):
         """Validate that session parameters are properly formatted."""
         if self.session_params is not None:
@@ -628,6 +648,12 @@ class GenerateReqInput(BaseReq):
             return_bytes=self.return_bytes,
             return_entropy=self.return_entropy,
             http_worker_ipc=self.http_worker_ipc,
+            dllm_algorithm=self.dllm_algorithm[i]
+            if self.dllm_algorithm is not None
+            else None,
+            dllm_block_size=self.dllm_block_size[i]
+            if self.dllm_block_size is not None
+            else None,
         )
 
 
@@ -695,6 +721,10 @@ class TokenizedGenerateReqInput(BaseReq):
 
     # Whether to return entropy
     return_entropy: bool = False
+
+    # Diffusion LLM
+    dllm_algorithm: Optional[str] = None
+    dllm_block_size: Optional[int] = None
 
 
 @dataclass

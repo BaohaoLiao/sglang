@@ -16,3 +16,7 @@ class DllmAlgorithm:
     def from_server_args(server_args: ServerArgs):
         config = DllmConfig.from_server_args(server_args)
         return get_algorithm(config)
+
+    @staticmethod
+    def from_config(config: DllmConfig):
+        return get_algorithm(config)

@@ -23,6 +23,7 @@ import torch
 from sglang.srt.configs.model_config import ModelConfig
 from sglang.srt.distributed import get_pp_group, get_world_group
 from sglang.srt.dllm.algorithm.base import DllmAlgorithm
+from sglang.srt.dllm.config import DllmConfig
 from sglang.srt.managers.io_struct import (
     DestroyWeightsUpdateGroupReqInput,
     GetWeightsByNameReqInput,
@@ -239,8 +240,12 @@ class TpModelWorker(BaseTpWorker):
             is_draft_model=is_draft_worker,
         )
 
+        self.dllm_algorithm_cache = {}
         if server_args.dllm_algorithm is not None:
-            self.dllm_algorithm = DllmAlgorithm.from_server_args(server_args)
+            cfg = DllmConfig.from_server_args(server_args)
+            self.dllm_algorithm_cache[
+                (cfg.algorithm, cfg.block_size, cfg.mask_id)
+            ] = DllmAlgorithm.from_config(cfg)
 
         self._model_runner = ModelRunner(
             model_config=self.model_config,
@@ -349,7 +354,13 @@ class TpModelWorker(BaseTpWorker):
         )
 
     def is_dllm(self):
-        return hasattr(self, "dllm_algorithm")
+        return bool(self.dllm_algorithm_cache)
+
+    def _get_dllm_algorithm(self, dllm_config: DllmConfig) -> DllmAlgorithm:
+        key = (dllm_config.algorithm, dllm_config.block_size, dllm_config.mask_id)
+        if key not in self.dllm_algorithm_cache:
+            self.dllm_algorithm_cache[key] = DllmAlgorithm.from_config(dllm_config)
+        return self.dllm_algorithm_cache[key]
 
     def forward_batch_generation(
         self,
@@ -379,9 +390,10 @@ class TpModelWorker(BaseTpWorker):
             )
 
         if self.pp_group.is_last_rank:
-            if self.is_dllm():
+            if batch.is_dllm():
+                dllm_algorithm = self._get_dllm_algorithm(batch.dllm_config)
                 logits_output, next_token_ids, can_run_cuda_graph = (
-                    self.dllm_algorithm.run(self.model_runner, forward_batch)
+                    dllm_algorithm.run(self.model_runner, forward_batch)
                 )
                 return GenerationBatchResult(
                     logits_output=logits_output,

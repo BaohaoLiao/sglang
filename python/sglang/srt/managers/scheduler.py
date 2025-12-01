@@ -1312,7 +1312,12 @@ class Scheduler(
                     self.metrics_collector if self.enable_metrics else None
                 ),
                 http_worker_ipc=recv_req.http_worker_ipc,
-                dllm_config=self.dllm_config,
+                dllm_config=DllmConfig.from_request_args(
+                    self.model_config,
+                    recv_req.dllm_algorithm,
+                    recv_req.dllm_block_size,
+                )
+                or self.dllm_config,
             )
             req.tokenizer = self.tokenizer
 
