@@ -394,9 +394,14 @@ class TpModelWorker(BaseTpWorker):
                 dllm_algorithm = self._get_dllm_algorithm(model_worker_batch.dllm_config)
                 # Debug print to observe DLLM inputs.
                 try:
+                    ids_flat = (
+                        forward_batch.input_ids.view(-1).tolist()
+                        if hasattr(forward_batch.input_ids, "view")
+                        else forward_batch.input_ids
+                    )
                     print(
                         "[DLLM tp_worker] input_ids=",
-                        forward_batch.input_ids[0].tolist(),
+                        ids_flat,
                         "dllm_config=",
                         model_worker_batch.dllm_config,
                         flush=True,

@@ -25,27 +25,28 @@ class LowConfidence(DllmAlgorithm):
         bool,
         torch.Tensor,
     ]:
-        # Ensure we have shape [1, seq]
-        if forward_batch.input_ids.dim() == 1:
-            input_ids = forward_batch.input_ids.unsqueeze(0)
-            forward_batch.input_ids = input_ids
-        else:
-            input_ids = forward_batch.input_ids
-
-        if input_ids.dim() != 2 or input_ids.size(0) != 1:
+        input_ids = forward_batch.input_ids
+        # Flatten to 1D (seq) for DLLM processing; we only support bs=1.
+        if input_ids.dim() == 2:
+            if input_ids.size(0) != 1:
+                raise ValueError(
+                    f"DLLM currently supports batch size 1, got shape {tuple(input_ids.shape)}"
+                )
+            input_ids = input_ids[0]
+        elif input_ids.dim() != 1:
             raise ValueError(
-                f"DLLM currently supports batch size 1, got shape {tuple(input_ids.shape)}"
+                f"DLLM currently supports 1D or [1, seq] input_ids, got shape {tuple(input_ids.shape)}"
             )
         mask_index = input_ids == self.mask_id
-        mask_positions = torch.nonzero(mask_index[0], as_tuple=False).flatten()
+        mask_positions = torch.nonzero(mask_index, as_tuple=False).flatten()
         if mask_positions.numel() == 0:
             # Fallback: treat the last block as masks and overwrite them.
-            seq_len = input_ids.size(1)
+            seq_len = input_ids.size(0)
             start = max(seq_len - self.block_size, 0)
             mask_positions = torch.arange(
                 start, seq_len, device=input_ids.device, dtype=torch.int64
             )
-            input_ids[0, mask_positions] = self.mask_id
+            input_ids[mask_positions] = self.mask_id
             mask_index = input_ids == self.mask_id
         else:
             start = mask_positions.min().item()
@@ -54,7 +55,7 @@ class LowConfidence(DllmAlgorithm):
         # Print to stdout for visibility even when logging is filtered.
         print(
             f"[DLLM LowConfidence] start={start} mask_positions={mask_positions.tolist()} "
-            f"input_tail={input_ids[0, -self.block_size :].tolist()}",
+            f"input_tail={input_ids[-self.block_size :].tolist()}",
             flush=True,
         )
 
@@ -67,7 +68,7 @@ class LowConfidence(DllmAlgorithm):
                 forward_batch, pp_proxy_tensors=None
             )
 
-            x = torch.argmax(logits_output.full_logits, dim=-1)  # [1, seq]
+            x = torch.argmax(logits_output.full_logits, dim=-1)  # [seq]
             p = torch.squeeze(
                 torch.gather(
                     F.softmax(logits_output.full_logits, dim=-1),
@@ -84,7 +85,7 @@ class LowConfidence(DllmAlgorithm):
 
             decoding_order.append(int(select_index.item() - start))
             input_ids = torch.where(transfer_index, x, input_ids)
-            forward_batch.input_ids = input_ids
+            forward_batch.input_ids = input_ids.unsqueeze(0)
 
             print(
                 f"[DLLM LowConfidence] step={step} select_index={select_index.item()} "
@@ -96,7 +97,7 @@ class LowConfidence(DllmAlgorithm):
             forward_batch, pp_proxy_tensors=None
         )
 
-        next_token_ids = input_ids[0, start:]
+        next_token_ids = input_ids[start:]
         # Emit an info-level log so it shows up without DEBUG handlers.
         logger.info(
             "DLLM LowConfidence run: start=%s mask_positions=%s decoding_order=%s next_token_ids=%s",
