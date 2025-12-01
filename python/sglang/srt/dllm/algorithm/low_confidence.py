@@ -30,13 +30,16 @@ class LowConfidence(DllmAlgorithm):
         mask_index = input_ids == self.mask_id
         mask_positions = torch.nonzero(mask_index[0], as_tuple=False).flatten()
         if mask_positions.numel() == 0:
-            # No masks detected; return a normal forward pass with empty order.
-            logits_output, can_run_cuda_graph = model_runner.forward(
-                forward_batch, pp_proxy_tensors=None
+            # Fallback: treat the last block as masks and overwrite them.
+            seq_len = input_ids.size(1)
+            start = max(seq_len - self.block_size, 0)
+            mask_positions = torch.arange(
+                start, seq_len, device=input_ids.device, dtype=torch.int64
             )
-            return logits_output, torch.empty(0, device=input_ids.device), can_run_cuda_graph, torch.empty(0, device=input_ids.device, dtype=torch.int32)
-
-        start = mask_positions.min().item()
+            input_ids[0, mask_positions] = self.mask_id
+            mask_index = input_ids == self.mask_id
+        else:
+            start = mask_positions.min().item()
         decoding_order = []
 
         for _ in range(self.block_size):
