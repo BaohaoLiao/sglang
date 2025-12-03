@@ -1,4 +1,4 @@
-from typing import Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 import numpy as np
 import torch
@@ -17,10 +17,14 @@ class LowConfidence(DllmAlgorithm):
         model_runner: ModelRunner,
         forward_batch: ForwardBatch,
     ) -> Tuple[
-        Union[LogitsProcessorOutput, torch.Tensor], Optional[torch.Tensor], bool
+        Union[LogitsProcessorOutput, torch.Tensor],
+        Optional[torch.Tensor],
+        bool,
+        List[int],
     ]:
         mask_index = forward_batch.input_ids == self.mask_id
         start = len(forward_batch.input_ids) - torch.sum(mask_index).item()
+        decoding_order = []
 
         for _ in range(self.block_size):
             mask_index = forward_batch.input_ids == self.mask_id
@@ -45,6 +49,7 @@ class LowConfidence(DllmAlgorithm):
             transfer_index = torch.zeros_like(x, dtype=torch.bool, device=x.device)
             _, select_index = torch.topk(confidence, k=1)
             transfer_index[select_index] = True
+            decoding_order.extend(select_index.detach().cpu().view(-1).tolist())
 
             forward_batch.input_ids[transfer_index] = x[transfer_index]
 
@@ -53,7 +58,7 @@ class LowConfidence(DllmAlgorithm):
         )
 
         next_token_ids = forward_batch.input_ids[start:]
-        return logits_output, next_token_ids, can_run_cuda_graph
+        return logits_output, next_token_ids, can_run_cuda_graph, decoding_order
 
 
 Algorithm = LowConfidence

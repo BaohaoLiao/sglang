@@ -380,12 +380,23 @@ class TpModelWorker(BaseTpWorker):
 
         if self.pp_group.is_last_rank:
             if self.is_dllm():
-                logits_output, next_token_ids, can_run_cuda_graph = (
-                    self.dllm_algorithm.run(self.model_runner, forward_batch)
+                dllm_result = self.dllm_algorithm.run(
+                    self.model_runner, forward_batch
                 )
+                if len(dllm_result) == 4:
+                    (
+                        logits_output,
+                        next_token_ids,
+                        can_run_cuda_graph,
+                        dllm_decoding_order,
+                    ) = dllm_result
+                else:
+                    logits_output, next_token_ids, can_run_cuda_graph = dllm_result
+                    dllm_decoding_order = None
                 return GenerationBatchResult(
                     logits_output=logits_output,
                     next_token_ids=next_token_ids,
+                    dllm_decoding_order=dllm_decoding_order,
                     can_run_cuda_graph=can_run_cuda_graph,
                 )
 

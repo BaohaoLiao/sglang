@@ -25,6 +25,7 @@ class GenerationBatchResult:
     pp_hidden_states_proxy_tensors: Optional[PPProxyTensors] = None
     next_token_ids: Optional[torch.Tensor] = None
     num_accepted_tokens: Optional[int] = None
+    dllm_decoding_order: Optional[List[int]] = None
     can_run_cuda_graph: bool = False
 
     # For output processing
@@ -56,12 +57,17 @@ class GenerationBatchResult:
             if self.logits_output.input_token_logprobs is not None:
                 self.logits_output.input_token_logprobs = (
                     self.logits_output.input_token_logprobs.to("cpu", non_blocking=True)
-                )
+            )
         if self.logits_output.hidden_states is not None:
             self.logits_output.hidden_states = self.logits_output.hidden_states.to(
                 "cpu", non_blocking=True
             )
         self.next_token_ids = self.next_token_ids.to("cpu", non_blocking=True)
+
+        if isinstance(self.dllm_decoding_order, torch.Tensor):
+            self.dllm_decoding_order = (
+                self.dllm_decoding_order.to("cpu", non_blocking=True).tolist()
+            )
 
         if self.accept_lens is not None:
             self.accept_lens = self.accept_lens.to("cpu", non_blocking=True)

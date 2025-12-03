@@ -297,6 +297,9 @@ class SchedulerOutputProcessorMixin:
         assert len(batch.reqs) == 1, "batch size is currently expected to be 1"
         req = batch.reqs[0]
 
+        if result.dllm_decoding_order is not None:
+            req.dllm_decoding_orders.append(result.dllm_decoding_order)
+
         for next_token_id in next_token_ids:
             req.output_ids.append(next_token_id)
             req.check_finished()
