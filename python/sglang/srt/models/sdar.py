@@ -412,6 +412,8 @@ class SDARForCausalLM(nn.Module):
 
         self.logits_processor = LogitsProcessor(config)
         self.pooler = Pooler(pooling_type=PoolingType.LAST, normalize=True)
+        # D-LLM decoding needs full logits for mask filling.
+        self.logits_processor.return_full_logits = True
 
     def get_input_embedding(self, input_ids: torch.Tensor) -> torch.Tensor:
         return self.model.get_input_embedding(input_ids)
@@ -951,6 +953,8 @@ class SDARMoeForCausalLM(nn.Module):
 
         self.logits_processor = LogitsProcessor(config)
         self.pooler = Pooler(pooling_type=PoolingType.LAST, normalize=True)
+        # D-LLM decoding needs full logits for mask filling.
+        self.logits_processor.return_full_logits = True
 
     def get_input_embeddings(self):
         return self.model.embed_tokens
