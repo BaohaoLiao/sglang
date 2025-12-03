@@ -52,6 +52,9 @@ class LowConfidence(DllmAlgorithm):
             start = mask_positions.min().item()
         decoding_order = []
 
+        # Always keep a batch dimension for the model forward call.
+        forward_batch.input_ids = input_ids.unsqueeze(0)
+
         # Print to stdout for visibility even when logging is filtered.
         print(
             f"[DLLM LowConfidence] start={start} mask_positions={mask_positions.tolist()} "
