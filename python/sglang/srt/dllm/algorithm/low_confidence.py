@@ -51,9 +51,8 @@ class LowConfidence(DllmAlgorithm):
         else:
             start = mask_positions.min().item()
         decoding_order = []
-
-        # Always keep a batch dimension for the model forward call.
-        forward_batch.input_ids = input_ids.unsqueeze(0)
+        # Keep flattened 1D ids; model forward expects [tokens] for prefill.
+        forward_batch.input_ids = input_ids
 
         # Print to stdout for visibility even when logging is filtered.
         print(
@@ -88,7 +87,7 @@ class LowConfidence(DllmAlgorithm):
 
             decoding_order.append(int(select_index.item() - start))
             input_ids = torch.where(transfer_index, x, input_ids)
-            forward_batch.input_ids = input_ids.unsqueeze(0)
+            forward_batch.input_ids = input_ids
 
             print(
                 f"[DLLM LowConfidence] step={step} select_index={select_index.item()} "
