@@ -1620,6 +1620,10 @@ class TokenizerManager(TokenizerCommunicatorMixin):
 
             if getattr(recv_obj, "output_hidden_states", None):
                 meta_info["hidden_states"] = recv_obj.output_hidden_states[i]
+            if getattr(recv_obj, "dllm_decoding_orders", None):
+                dllm_order = recv_obj.dllm_decoding_orders[i]
+                if dllm_order:
+                    meta_info["dllm_decoding_orders"] = dllm_order
 
             if isinstance(recv_obj, BatchStrOutput):
                 state.text += recv_obj.output_strs[i]

@@ -185,6 +185,9 @@ def _handle_output_by_index(output, i):
             output_hidden_states=_extract_field_by_index(
                 output, "output_hidden_states", i, check_length=False
             ),
+            dllm_decoding_orders=_extract_field_by_index(
+                output, "dllm_decoding_orders", i, check_length=False
+            ),
             placeholder_tokens_idx=None,
             placeholder_tokens_val=None,
             token_steps=_extract_field_by_index(
@@ -263,6 +266,9 @@ def _handle_output_by_index(output, i):
             ),
             output_hidden_states=_extract_field_by_index(
                 output, "output_hidden_states", i, check_length=False
+            ),
+            dllm_decoding_orders=_extract_field_by_index(
+                output, "dllm_decoding_orders", i, check_length=False
             ),
             placeholder_tokens_idx=None,
             placeholder_tokens_val=None,

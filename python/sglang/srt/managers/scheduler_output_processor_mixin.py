@@ -748,6 +748,7 @@ class SchedulerOutputProcessorMixin:
         decode_ids_list = []
         read_offsets = []
         output_ids = []
+        dllm_decoding_orders = []
 
         skip_special_tokens = []
         spaces_between_special_tokens = []
@@ -950,6 +951,11 @@ class SchedulerOutputProcessorMixin:
                         output_hidden_states = []
                     output_hidden_states.append(req.hidden_states)
 
+                if req.dllm_decoding_orders:
+                    dllm_decoding_orders.append(req.dllm_decoding_orders.copy())
+                else:
+                    dllm_decoding_orders.append(None)
+
             if (
                 req.finished()
                 and self.attn_tp_rank == 0
@@ -1000,6 +1006,7 @@ class SchedulerOutputProcessorMixin:
                     placeholder_tokens_idx=None,
                     placeholder_tokens_val=None,
                     retraction_counts=retraction_counts,
+                    dllm_decoding_orders=dllm_decoding_orders,
                 )
             )
 

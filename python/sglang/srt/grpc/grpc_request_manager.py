@@ -585,6 +585,11 @@ class GrpcRequestManager:
                 },
             }
 
+            if getattr(batch_out, "dllm_decoding_orders", None):
+                dllm_order = batch_out.dllm_decoding_orders[i]
+                if dllm_order:
+                    output_data["meta_info"]["dllm_decoding_orders"] = dllm_order
+
             # Accumulate logprobs (following tokenizer_manager pattern)
             if state.obj.return_logprob:
                 self._convert_logprob_style(state, batch_out, i)
