@@ -28,6 +28,11 @@ class DllmConfig:
 
         if config.hf_config.architectures[0] == "LLaDA2MoeModelLM":
             mask_id = 156895
+        elif config.hf_config.architectures[0] in [
+            "SDARForCausalLM",
+            "SDARMoeForCausalLM",
+        ]:
+            mask_id = 151669
         else:
             raise RuntimeError(
                 f"Unknown diffusion LLM: {config.hf_config.architectures[0]}"
