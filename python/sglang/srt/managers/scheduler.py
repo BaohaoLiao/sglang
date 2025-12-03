@@ -1993,53 +1993,65 @@ class Scheduler(
                 batch_or_worker_batch = batch.get_model_worker_batch()
 
             if self.enable_overlap:
-                # FIXME: remove this assert
-                assert isinstance(batch_or_worker_batch, ModelWorkerBatch)
-                model_worker_batch = batch_or_worker_batch
-                self.record_batch_in_overlap(model_worker_batch)
-
-                # Sampling info will be modified during forward
-                model_worker_batch.sampling_info = (
-                    model_worker_batch.sampling_info.copy_for_forward()
-                )
-
-                bs = len(model_worker_batch.seq_lens)
-                future_indices = self.future_map.alloc_future_indices(bs)
-
-                with self.forward_stream_ctx:
-                    self.forward_stream.wait_stream(self.default_stream)
-                    self.future_map.resolve_future(model_worker_batch)
+                if batch.is_dllm():
+                    # DLLM returns multiple tokens per request; overlap path expects one token per request.
                     batch_result = self.model_worker.forward_batch_generation(
-                        model_worker_batch
+                        batch_or_worker_batch
                     )
-                    # FIXME(lsyin): maybe move this to forward_batch_generation
-                    batch_result.copy_done = torch.get_device_module(
-                        self.device
-                    ).Event()
-                    if batch_result.delay_sample_func is None:
-                        self.future_map.store_to_map(future_indices, batch_result)
-                        batch_result.copy_to_cpu(return_logprob=batch.return_logprob)
-                    else:
-                        batch_result.future_indices = future_indices
+                    future_indices_or_next_token_ids = batch_result.next_token_ids
+                    self.update_cache_from_scheduler(batch, batch_result)
+                else:
+                    # FIXME: remove this assert
+                    assert isinstance(batch_or_worker_batch, ModelWorkerBatch)
+                    model_worker_batch = batch_or_worker_batch
+                    self.record_batch_in_overlap(model_worker_batch)
 
-                # FIXME(lsyin): move this assignment elsewhere
-                future_indices_or_next_token_ids = -future_indices.indices
+                    # Sampling info will be modified during forward
+                    model_worker_batch.sampling_info = (
+                        model_worker_batch.sampling_info.copy_for_forward()
+                    )
 
-                if batch.is_v2_eagle:
-                    # FIXME(lsyin): tmp code for eagle v2
-                    # We only keep future indices for next draft input
+                    bs = len(model_worker_batch.seq_lens)
+                    future_indices = self.future_map.alloc_future_indices(bs)
 
-                    batch.spec_info = batch_result.next_draft_input
-                    batch.spec_info.future_indices = future_indices
+                    with self.forward_stream_ctx:
+                        self.forward_stream.wait_stream(self.default_stream)
+                        self.future_map.resolve_future(model_worker_batch)
+                        batch_result = self.model_worker.forward_batch_generation(
+                            model_worker_batch
+                        )
+                        # FIXME(lsyin): maybe move this to forward_batch_generation
+                        batch_result.copy_done = torch.get_device_module(
+                            self.device
+                        ).Event()
+                        if batch_result.delay_sample_func is None:
+                            self.future_map.store_to_map(
+                                future_indices, batch_result
+                            )
+                            batch_result.copy_to_cpu(
+                                return_logprob=batch.return_logprob
+                            )
+                        else:
+                            batch_result.future_indices = future_indices
 
-                    # batch.spec_info = EagleDraftInput(
-                    #     future_indices=future_indices,
-                    #     verify_done=batch_result.next_draft_input.verify_done,
-                    # )
+                    # FIXME(lsyin): move this assignment elsewhere
+                    future_indices_or_next_token_ids = -future_indices.indices
 
-                    # The future value, usually for next batch preparation
-                    # Current implementation strictly synchronizes the seq_lens
-                    batch.seq_lens = batch_result.next_draft_input.new_seq_lens
+                    if batch.is_v2_eagle:
+                        # FIXME(lsyin): tmp code for eagle v2
+                        # We only keep future indices for next draft input
+
+                        batch.spec_info = batch_result.next_draft_input
+                        batch.spec_info.future_indices = future_indices
+
+                        # batch.spec_info = EagleDraftInput(
+                        #     future_indices=future_indices,
+                        #     verify_done=batch_result.next_draft_input.verify_done,
+                        # )
+
+                        # The future value, usually for next batch preparation
+                        # Current implementation strictly synchronizes the seq_lens
+                        batch.seq_lens = batch_result.next_draft_input.new_seq_lens
             elif self.enable_pdmux and batch.forward_mode.is_split_prefill():
                 batch_result = self.tp_worker.forward_batch_split_prefill(batch)
                 future_indices_or_next_token_ids = batch_result.next_token_ids
